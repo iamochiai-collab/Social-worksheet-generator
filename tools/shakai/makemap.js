@@ -52,6 +52,12 @@ const pref = cut.map((f, i) => {
   const c = gp.centroid(f), b = gp.bounds(f);
   return { n: NAMES[i], d: pathOf(f, pj), c: [r1(c[0]), r1(c[1])], b: b.map((p) => p.map(r1)) };
 });
+// となりの都道府県(陸でさかいを接する)と、海に面しているか
+const nbr = topo.neighbors(jp.objects.prefectures.geometries).map((l) => l.map((k) => Number(jp.objects.prefectures.geometries[k].id) - 1).sort((a, b) => a - b));
+const arcsOf = (geo) => { const out = []; const walk = (a) => (Array.isArray(a) ? a.forEach(walk) : out.push(a < 0 ? ~a : a)); walk(geo.arcs); return out; };
+const arcCnt = {};
+jp.objects.prefectures.geometries.forEach((g) => arcsOf(g).forEach((a) => (arcCnt[a] = (arcCnt[a] || 0) + 1)));
+jp.objects.prefectures.geometries.forEach((g) => { const i = Number(g.id) - 1; pref[i].nb = nbr[jp.objects.prefectures.geometries.indexOf(g)]; pref[i].sea = arcsOf(g).some((a) => arcCnt[a] === 1) ? 1 : 0; });
 const okFrame = (() => { const b = pref[46].b; return [r1(b[0][0] - 2), r1(b[0][1] - 2), r1(b[1][0] - b[0][0] + 4), r1(b[1][1] - b[0][1] + 4)]; })();
 const H = r1(fy(mainB[1][1]) + 2), W2 = r1(fx(mainB[1][0]) + 3);
 // ===== 世界 =====

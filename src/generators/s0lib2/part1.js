@@ -131,6 +131,58 @@ var SD = (() => {
     for (const L of o.text || []) lab.push(L);
     return fig(W, H, raw, lab, o.kk || 1.12);
   }
+  // 都道府県の形だけを大きくかく(x, y, はば w, 高さ h のわくに入れる)
+  function prefShape(i, x, y, w, h, o = {}) {
+    const p = SMAP.jp.pref[i], [[bx0, by0], [bx1, by1]] = p.b;
+    const k = Math.min(w / (bx1 - bx0), h / (by1 - by0));
+    const dx = x + (w - (bx1 - bx0) * k) / 2 - bx0 * k, dy = y + (h - (by1 - by0) * k) / 2 - by0 * k;
+    return `<g transform="translate(${r1(dx)},${r1(dy)}) scale(${r1(k)})"><path d="${p.d}" fill="${o.f || "#f4dfa0"}" stroke="#000" stroke-width="${r1(0.5 / k)}" stroke-linejoin="round"/></g>`;
+  }
+  // 地方を大きくかく。labels: {都道府県の番号: 記号}。others: まわりの県もうすくかく
+  function regionZoom(ids, labels = {}, o = {}) {
+    const J = SMAP.jp, P = J.pref;
+    let bx0 = 1e9, by0 = 1e9, bx1 = -1e9, by1 = -1e9;
+    for (const i of ids) { const b = P[i].b; bx0 = Math.min(bx0, b[0][0]); by0 = Math.min(by0, b[0][1]); bx1 = Math.max(bx1, b[1][0]); by1 = Math.max(by1, b[1][1]); }
+    const pad = 1.5;
+    bx0 -= pad; by0 -= pad; bx1 += pad; by1 += pad;
+    const W = o.w || 100, k = Math.min(W / (bx1 - bx0), (o.maxH || 92) / (by1 - by0)), H = (by1 - by0) * k, WW = (bx1 - bx0) * k;
+    // わくの外にはみ出す県は切りとる(clipPath の id は図ごとにかえる)
+    const cid = "rz" + ids.join("_") + "w" + Math.round(WW * 10) + "h" + Math.round(H * 10);
+    let raw = `<defs><clipPath id="${cid}"><rect x="0" y="0" width="${r1(WW)}" height="${r1(H)}"/></clipPath></defs><g clip-path="url(#${cid})"><g transform="scale(${r1(k)}) translate(${r1(-bx0)},${r1(-by0)})">`;
+    P.forEach((p, i) => {
+      if (i === 46 && !ids.includes(46)) return;
+      const inR = ids.includes(i);
+      raw += `<path d="${p.d}" fill="${inR ? (o.fill && o.fill[i]) || "#fff" : "#e6e6e6"}" stroke="${inR ? "#000" : "#999"}" stroke-width="${r1((inR ? 0.35 : 0.2) / k)}" stroke-linejoin="round"/>`;
+    });
+    raw += `</g></g>` + rect(0, 0, WW, H, { w: 0.4 });
+    const lab = [];
+    for (const [i, s] of Object.entries(labels)) {
+      const c = P[i].c, X = (c[0] - bx0) * k, Y = (c[1] - by0) * k;
+      if (X < 2 || X > WW - 2 || Y < 2 || Y > H - 1) continue;
+      raw += `<circle cx="${r1(X)}" cy="${r1(Y - 0.2)}" r="2.6" fill="#fff" stroke="#000" stroke-width="0.25"/>`;
+      lab.push(T(X, Y + 1.1, s, 3.2, { bold: true }));
+    }
+    // 名前だけ書く(まわりの県など)
+    for (const [i, s] of Object.entries(o.names || {})) {
+      const c = P[i].c, X = (c[0] - bx0) * k, Y = (c[1] - by0) * k;
+      if (X < 6 || X > WW - 6 || Y < 3 || Y > H - 2) continue;
+      lab.push(T(X, Y + 1, s, 2.7));
+    }
+    return fig(WW, H, raw, lab, o.kk || 1.05);
+  }
+  function shapeRow(ids, labels, o = {}) {
+    const S = o.size || 34, g = 4;
+    let raw = "";
+    const lab = [];
+    ids.forEach((i, k) => {
+      const x = k * (S + g);
+      raw += rect(x, 0, S, S, { r: 2, f: "#fff", w: 0.35, c: "#888" }) + prefShape(i, x + 3, 3, S - 6, S - 6, { f: "#8fc98f" });
+      lab.push(T(x + S / 2, S + 5, labels[k], 3.6, { bold: true }));
+    });
+    return fig(ids.length * (S + g) - g, S + 7, raw, lab, 1.05);
+  }
+  const NB = (i) => SMAP.jp.pref[i].nb;
+  const SEA = (i) => SMAP.jp.pref[i].sea === 1;
   // 7地方の色わけ地図(記号つき)
   const RCOL = ["#f6d4d0", "#d9efd2", "#e8f4fb", "#fbf0c4", "#ead9f2", "#d6ecf7", "#f3e6c8"];
   function regionMap(labels) {
@@ -369,5 +421,5 @@ var SD = (() => {
     return fig(100, 54, raw, lab, 1.05);
   }
 
-  return { CLIMATEK, SYM_NAMES, symName, SYM_FROM, symFrom, sym, symRow, DIR8, compass, PREF, prefNo, REG7, regionOf, capOf, jpMap, regionMap, CONT, SHU, worldMap, WP, CLIMATE, climate, climates, barH, lineYears, sanken, supplyDemand, pyramids, townMap, dirFrom, contour };
+  return { shapeRow, prefShape, regionZoom, NB, SEA, CLIMATEK, SYM_NAMES, symName, SYM_FROM, symFrom, sym, symRow, DIR8, compass, PREF, prefNo, REG7, regionOf, capOf, jpMap, regionMap, CONT, SHU, worldMap, WP, CLIMATE, climate, climates, barH, lineYears, sanken, supplyDemand, pyramids, townMap, dirFrom, contour };
 })();
