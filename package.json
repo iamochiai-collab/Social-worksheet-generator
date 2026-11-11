@@ -1,0 +1,24 @@
+{
+  "name": "shakai-print",
+  "version": "1.0.0",
+  "private": true,
+  "author": "落合聡一",
+  "license": "MIT",
+  "description": "社会プリントをつくる 1 ファイルの Web アプリ(小1・2 さきどり社会 〜 中学 地理・歴史・公民、特別支援学校の段階)",
+  "scripts": {
+    "build": "node tools/shakai/makemap.js && python3 tools/build.py",
+    "annotate": "node tools/rika/annotate.js",
+    "test": "npm run build && node tools/rika/check.js build/test.html 150 && node tools/test/generators.js build/test.html all 60",
+    "test:layout": "npm run build && node tools/test/layout.js docs/index.html",
+    "test:sub": "npm run build && node tools/test/subunits.js docs/index.html"
+  },
+  "devDependencies": {
+    "kuromoji": "^0.1.2",
+    "playwright": "^1.47.0",
+    "topojson-client": "^3.1.0",
+    "topojson-simplify": "^3.0.3",
+    "d3-geo": "^3.1.2",
+    "jpn-atlas": "^1.0.2",
+    "world-atlas": "^2.0.2"
+  }
+}
