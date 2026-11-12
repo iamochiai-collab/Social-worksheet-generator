@@ -368,7 +368,7 @@ var s4 = (() => {
     const words = rng.shuffle(five.slice());
     const qs = byPlace.map((t, k) => [`${NUM[k]}`, `${LET[words.indexOf(t)]}(${t[0]})`]);
     if (lv >= 2) qs.push([`${NUM[0]}の{都道府県|とどうふけん}{名|めい}を{書|か}きましょう。`, PREF[byPlace[0][1]]]);
-    return { fig: jpMap({ mark: byPlace.map((t, k) => [t[1], NUM[k]]), fill: Object.fromEntries(byPlace.map((t) => [t[1], "#f0d070"])) }), text: `{地図|ちず}の${NUM[0]}〜${NUM[five.length - 1]}の{都道府県|とどうふけん}で、{生産|せいさん}が{日本|にほん}{一|いち}の{農産物|のうさんぶつ}を、{下|した}のア〜${LET[five.length - 1]}から1つずつえらびましょう。　${words.map((t, k) => `${LET[k]} ${t[0]}`).join("　")}`, qs, key: `t${lv}` + five.map((t) => t[0]).join(), side: false };
+    return { fig: jpMap({ mark: byPlace.map((t, k) => [t[1], NUM[k]]), fill: Object.fromEntries(byPlace.map((t) => [t[1], "#f0d070"])) }), text: `{地図|ちず}の${NUM[0]}〜${NUM[five.length - 1]}の{都道府県|とどうふけん}で、{生産|せいさん}が{日本|にほん}{一|いち}の{農産物|のうさんぶつ}を、{下|した}のア〜${LET[five.length - 1]}から1つずつえらびましょう。[[br]]〔 ${words.map((t, k) => `${LET[k]} ${t[0]}`).join(" ・ ")} 〕`, qs, key: `t${lv}` + five.map((t) => t[0]).join(), side: false };
   } })));
   const toku = bank("e4.toku", `
 1|りんごの{生産|せいさん}がいちばん{多|おお}い{県|けん}はどこですか。|={青森|あおもり}{県|けん}|{長野|ながの}{県|けん}|{山形|やまがた}{県|けん}

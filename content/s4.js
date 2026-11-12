@@ -367,7 +367,7 @@ var s4 = (() => {
     const words = rng.shuffle(five.slice());
     const qs = byPlace.map((t, k) => [`${NUM[k]}`, `${LET[words.indexOf(t)]}(${t[0]})`]);
     if (lv >= 2) qs.push([`${NUM[0]}の都道府県名を書きましょう。`, PREF[byPlace[0][1]]]);
-    return { fig: jpMap({ mark: byPlace.map((t, k) => [t[1], NUM[k]]), fill: Object.fromEntries(byPlace.map((t) => [t[1], "#f0d070"])) }), text: `地図の${NUM[0]}〜${NUM[five.length - 1]}の都道府県で、生産が日本一の農産物を、下のア〜${LET[five.length - 1]}から1つずつえらびましょう。　${words.map((t, k) => `${LET[k]} ${t[0]}`).join("　")}`, qs, key: `t${lv}` + five.map((t) => t[0]).join(), side: false };
+    return { fig: jpMap({ mark: byPlace.map((t, k) => [t[1], NUM[k]]), fill: Object.fromEntries(byPlace.map((t) => [t[1], "#f0d070"])) }), text: `地図の${NUM[0]}〜${NUM[five.length - 1]}の都道府県で、生産が日本一の農産物を、下のア〜${LET[five.length - 1]}から1つずつえらびましょう。[[br]]〔 ${words.map((t, k) => `${LET[k]} ${t[0]}`).join(" ・ ")} 〕`, qs, key: `t${lv}` + five.map((t) => t[0]).join(), side: false };
   } })));
   const toku = bank("e4.toku", `
 1|りんごの生産がいちばん多い県はどこですか。|=青森県|長野県|山形県

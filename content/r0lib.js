@@ -447,14 +447,50 @@ APEC,ASEAN,EU,USMCA,TPP
         const it = pickW(rng, pool.map((x) => ({ ...x, lv: x.lv || 1 })), p.max);
         const r = it.make(rng, p);
         const qs = r.qs;
-        const labels = qs.map((_, i) => `(${i + 1})`);
-        const text = `${r.text || "図を見て、次の問いに答えましょう。"}[[br]]${qs.map((q, i) => `(${i + 1}) ${q[0]}`).join("[[br]]")}`;
+        if (o.lines) {
+          const labels = qs.map((_, i) => `(${i + 1})`);
+          const text = `${r.text || "図を見て、次の問いに答えましょう。"}[[br]]${qs.map((q, i) => `(${i + 1}) ${q[0]}`).join("[[br]]")}`;
+          return { key: `${id}:${r.key ?? noRuby(text)}#${round}`, text, figure: r.fig, answer: { display: qs.map((q, i) => `(${i + 1}) ${exAns(q[0], q[1], 8).replace(/　/g, " ")}`).join("　") }, workspace: { type: "lines", labels }, side: r.side !== false, meta: {} };
+        }
+        // 答えは、問いのうしろの四角に書く(四角の大きさは答えの長さに合わせる。長い答えは線)。
+        // 「①」「ア」のような短い問いは、1行に3つずつならべる(Z会・ちびむすの「①（　　）②（　　）」の形)
+        const ansOf = (a) => String(a).replace(/、/g, "・").replace(/　/g, " ");
+        const boxOf = (a0) => {
+          // 答えのうしろの(…)は四角のはばに入れない
+          const a = noRuby(a0).replace(/[(（][^)）]*[)）]\s*$/, "") || noRuby(a0);
+          const n = [...noRuby(a)].length;
+          if (n > 13) return "[[aline]]";
+          return `[[abox:${Math.min(100, Math.max(30, [...noRuby(a)].reduce((x, ch) => x + (ch.charCodeAt(0) < 8192 ? 8.5 : 10), 0) + 5))}]]`;
+        };
+        const blank = /（[　 ]{2,}）/;
+        const lines = [];
+        let row = [], rowW = 0;
+        const wOf = (b) => (/aline/.test(b) ? 999 : Number(b.match(/[\d.]+/)[0]) + 14);
+        const isShort = (q) => [...noRuby(String(q[0]))].length <= 3 && [...noRuby(ansOf(q[1])).replace(/[(（][^)）]*[)）]\s*$/, "")].length <= 7;
+        // ならべる四角は、いちばん長い答えに合わせて同じはばにする(四角の長さで答えがわからないように)
+        const shortW = Math.max(0, ...qs.filter(isShort).map((q) => Number((boxOf(ansOf(q[1])).match(/abox:([\d.]+)/) || [0, 0])[1])));
+        qs.forEach((q, i) => {
+          const qt = String(q[0]), a = ansOf(q[1]);
+          if (isShort(q)) {
+            const b = `[[abox:${shortW}]]`, w = wOf(b);
+            // 1行(はば 165mm くらい)に入るだけならべる
+            if (row.length && (rowW + w > 165 || row.length === 3)) { lines.push(row.join("　　")); row = []; rowW = 0; }
+            row.push(`${qt} ${b}`);
+            rowW += w;
+            return;
+          }
+          if (row.length) { lines.push(row.join("　　")); row = []; rowW = 0; }
+          lines.push(blank.test(qt) ? `(${i + 1}) ${qt.replace(blank, boxOf(a))}` : `(${i + 1}) ${qt} ${boxOf(a)}`);
+        });
+        if (row.length) lines.push(row.join("　　"));
+        const text = `${r.text || "図を見て、次の問いに答えましょう。"}[[br]]${lines.join("[[br]]")}`;
         return {
           key: `${id}:${r.key ?? noRuby(text)}#${round}`,
           text,
           figure: r.fig,
-          answer: { display: qs.map((q, i) => `(${i + 1}) ${exAns(q[0], q[1], 8).replace(/　/g, " ")}`).join("　") },
-          workspace: { type: "lines", labels },
+          answer: { display: qs.map((q, i) => `(${i + 1}) ${ansOf(q[1])}`).join("　") },
+          workspace: { type: "none" },
+          noAnswerBox: true,
           side: r.side !== false,
           meta: {}
         };
@@ -474,7 +510,7 @@ APEC,ASEAN,EU,USMCA,TPP
         const r = make(rng, p);
         // 数の組み合わせが少ない問題もあるので、o.n 問(ふつう 6問)ごとに同じ問題をゆるす
         const round = ctx && Number.isInteger(ctx.index) ? Math.floor(ctx.index / (o.n || 6)) : 0;
-        return { key: `${id}:${r.key ?? noRuby(r.text)}#${round}`, text: r.text, wide: r.wide !== false, answer: { display: r.a }, workspace: { type: "none" }, work: p.compact ? 12 : r.work ?? o.work ?? 22, plainBox: true, meta: {} };
+        return { key: `${id}:${r.key ?? noRuby(r.text)}#${round}`, text: r.text, wide: r.wide !== false, answer: { display: r.a }, workspace: { type: "none" }, work: o.work === 0 ? 0 : p.compact ? 12 : r.work ?? o.work ?? 22, plainBox: true, meta: {} };
       }
     };
   }

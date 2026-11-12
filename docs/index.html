@@ -33342,14 +33342,50 @@ svg .keyd { fill: var(--key, #ef7d00); font-weight: bold; }
           const it = pickW(rng, pool.map((x) => ({ ...x, lv: x.lv || 1 })), p.max);
           const r = it.make(rng, p);
           const qs = r.qs;
-          const labels = qs.map((_, i) => `(${i + 1})`);
-          const text = `${r.text || "図を見て、次の問いに答えましょう。"}[[br]]${qs.map((q, i) => `(${i + 1}) ${q[0]}`).join("[[br]]")}`;
+          if (o.lines) {
+            const labels = qs.map((_, i) => `(${i + 1})`);
+            const text = `${r.text || "図を見て、次の問いに答えましょう。"}[[br]]${qs.map((q, i) => `(${i + 1}) ${q[0]}`).join("[[br]]")}`;
+            return { key: `${id}:${r.key ?? noRuby(text)}#${round}`, text, figure: r.fig, answer: { display: qs.map((q, i) => `(${i + 1}) ${exAns(q[0], q[1], 8).replace(/　/g, " ")}`).join("　") }, workspace: { type: "lines", labels }, side: r.side !== false, meta: {} };
+          }
+          // 答えは、問いのうしろの四角に書く(四角の大きさは答えの長さに合わせる。長い答えは線)。
+          // 「①」「ア」のような短い問いは、1行に3つずつならべる(Z会・ちびむすの「①（　　）②（　　）」の形)
+          const ansOf = (a) => String(a).replace(/、/g, "・").replace(/　/g, " ");
+          const boxOf = (a0) => {
+            // 答えのうしろの(…)は四角のはばに入れない
+            const a = noRuby(a0).replace(/[(（][^)）]*[)）]\s*$/, "") || noRuby(a0);
+            const n = [...noRuby(a)].length;
+            if (n > 13) return "[[aline]]";
+            return `[[abox:${Math.min(100, Math.max(30, [...noRuby(a)].reduce((x, ch) => x + (ch.charCodeAt(0) < 8192 ? 8.5 : 10), 0) + 5))}]]`;
+          };
+          const blank = /（[　 ]{2,}）/;
+          const lines = [];
+          let row = [], rowW = 0;
+          const wOf = (b) => (/aline/.test(b) ? 999 : Number(b.match(/[\d.]+/)[0]) + 14);
+          const isShort = (q) => [...noRuby(String(q[0]))].length <= 3 && [...noRuby(ansOf(q[1])).replace(/[(（][^)）]*[)）]\s*$/, "")].length <= 7;
+          // ならべる四角は、いちばん長い答えに合わせて同じはばにする(四角の長さで答えがわからないように)
+          const shortW = Math.max(0, ...qs.filter(isShort).map((q) => Number((boxOf(ansOf(q[1])).match(/abox:([\d.]+)/) || [0, 0])[1])));
+          qs.forEach((q, i) => {
+            const qt = String(q[0]), a = ansOf(q[1]);
+            if (isShort(q)) {
+              const b = `[[abox:${shortW}]]`, w = wOf(b);
+              // 1行(はば 165mm くらい)に入るだけならべる
+              if (row.length && (rowW + w > 165 || row.length === 3)) { lines.push(row.join("　　")); row = []; rowW = 0; }
+              row.push(`${qt} ${b}`);
+              rowW += w;
+              return;
+            }
+            if (row.length) { lines.push(row.join("　　")); row = []; rowW = 0; }
+            lines.push(blank.test(qt) ? `(${i + 1}) ${qt.replace(blank, boxOf(a))}` : `(${i + 1}) ${qt} ${boxOf(a)}`);
+          });
+          if (row.length) lines.push(row.join("　　"));
+          const text = `${r.text || "図を見て、次の問いに答えましょう。"}[[br]]${lines.join("[[br]]")}`;
           return {
             key: `${id}:${r.key ?? noRuby(text)}#${round}`,
             text,
             figure: r.fig,
-            answer: { display: qs.map((q, i) => `(${i + 1}) ${exAns(q[0], q[1], 8).replace(/　/g, " ")}`).join("　") },
-            workspace: { type: "lines", labels },
+            answer: { display: qs.map((q, i) => `(${i + 1}) ${ansOf(q[1])}`).join("　") },
+            workspace: { type: "none" },
+            noAnswerBox: true,
             side: r.side !== false,
             meta: {}
           };
@@ -33369,7 +33405,7 @@ svg .keyd { fill: var(--key, #ef7d00); font-weight: bold; }
           const r = make(rng, p);
           // 数の組み合わせが少ない問題もあるので、o.n 問(ふつう 6問)ごとに同じ問題をゆるす
           const round = ctx && Number.isInteger(ctx.index) ? Math.floor(ctx.index / (o.n || 6)) : 0;
-          return { key: `${id}:${r.key ?? noRuby(r.text)}#${round}`, text: r.text, wide: r.wide !== false, answer: { display: r.a }, workspace: { type: "none" }, work: p.compact ? 12 : r.work ?? o.work ?? 22, plainBox: true, meta: {} };
+          return { key: `${id}:${r.key ?? noRuby(r.text)}#${round}`, text: r.text, wide: r.wide !== false, answer: { display: r.a }, workspace: { type: "none" }, work: o.work === 0 ? 0 : p.compact ? 12 : r.work ?? o.work ?? 22, plainBox: true, meta: {} };
         }
       };
     }
@@ -33664,7 +33700,10 @@ svg .keyd { fill: var(--key, #ef7d00); font-weight: bold; }
         const p = J.pref[i], cx = p.c[0] * k, cy = p.c[1] * k;
         const bw = (p.b[1][0] - p.b[0][0]) * k;
         if (out || bw < 7) {
-          const [dx, dy] = out || CAND.find(([a, b]) => far(cx + a, cy + b)) || CAND[0];
+          let [dx, dy] = out || CAND.find(([a, b]) => far(cx + a, cy + b)) || CAND.find(([a, b]) => cx + a > 4 && cx + a < W - 4 && cy + b > 4 && cy + b < H - 3) || CAND[0];
+          // 図のわくの外に出ないように
+          dx = Math.max(4 - cx, Math.min(W - 4 - cx, dx));
+          dy = Math.max(4 - cy, Math.min(H - 3 - cy, dy));
           used.push([cx + dx, cy + dy]);
           raw += line(cx, cy, cx + dx, cy + dy, { w: 0.3 }) + `<circle cx="${r1(cx)}" cy="${r1(cy)}" r="0.6" fill="#000"/>`;
           lab.push(T(cx + dx + (dx >= 0 ? 2.2 : -2.2), cy + dy + 1.4, s, 3.6, { bold: true }));
@@ -33863,7 +33902,8 @@ svg .keyd { fill: var(--key, #ef7d00); font-weight: bold; }
       L(lb.g ?? "{選挙|せんきょ}", 63.5, 25, "end");
       L(lb.h ?? "{世論|よろん}", 42, 58.5, "end");
       L(lb.i ?? "{国民|こくみん}{審査|しんさ}", 88, 58.5, "start");
-      return fig(132, 84, raw, lab, 1.05);
+      // 左はしのことばがはみ出さないように、全体を右へ 3mm ずらす
+      return fig(136, 84, `<g transform="translate(3,0)">${raw}</g>`, lab.map((x) => ({ ...x, x: x.x + 3 })), 1.05);
     }
 
     // ===== 需要と供給の曲線 =====
@@ -34238,21 +34278,21 @@ svg .keyd { fill: var(--key, #ef7d00); font-weight: bold; }
     const dir = bank("e3.dir", `
   1|{東|ひがし}・{西|にし}・{南|みなみ}・{北|きた}の4つの{向|む}きのことを{何|なん}といいますか。|{四方位|しほうい}
   1|{方位|ほうい}を{調|しら}べるときに{使|つか}う{道具|どうぐ}を{何|なん}といいますか。|{方位|ほうい}じしん
-  1|{方位|ほうい}じしんのはりの{色|いろ}がついている{方|ほう}は、どの{方|ほう}{位|くらい}をさしますか。|{北|きた}
-  1|{地図|ちず}は、ふつう、どの{方|ほう}{位|くらい}を{上|うえ}にしてかきますか。|={北|きた}|{南|みなみ}|{東|ひがし}|{西|にし}
-  1|{北|きた}を{向|む}いて{立|た}ったとき、{右手|みぎて}の{方|ほう}{位|くらい}はどれですか。|={東|ひがし}|{西|にし}|{南|みなみ}
-  1|{北|きた}を{向|む}いて{立|た}ったとき、うしろの{方|ほう}{位|くらい}はどれですか。|={南|みなみ}|{東|ひがし}|{西|にし}
+  1|{方位|ほうい}じしんのはりの{色|いろ}がついている{方|ほう}は、どの{方位|ほうい}をさしますか。|{北|きた}
+  1|{地図|ちず}は、ふつう、どの{方位|ほうい}を{上|うえ}にしてかきますか。|={北|きた}|{南|みなみ}|{東|ひがし}|{西|にし}
+  1|{北|きた}を{向|む}いて{立|た}ったとき、{右手|みぎて}の{方位|ほうい}はどれですか。|={東|ひがし}|{西|にし}|{南|みなみ}
+  1|{北|きた}を{向|む}いて{立|た}ったとき、うしろの{方位|ほうい}はどれですか。|={南|みなみ}|{東|ひがし}|{西|にし}
   1|{朝|あさ}、{太陽|たいよう}がのぼってくる{方位|ほうい}はどれですか。|={東|ひがし}|{西|にし}|{北|きた}
-  2|{北|きた}と{東|ひがし}のあいだの{方|ほう}{位|くらい}を{何|なん}といいますか。|{北東|ほくとう}
-  2|{南|みなみ}と{西|にし}のあいだの{方|ほう}{位|くらい}を{何|なん}といいますか。|{南西|なんせい}
-  2|{東|ひがし}・{西|にし}・{南|みなみ}・{北|きた}に、{北東|ほくとう}・{北西|ほくせい}・{南東|なんとう}・{南西|なんせい}をくわえた8つの{方|ほう}{位|くらい}を{何|なん}といいますか。|{八方位|はっぽうい}
+  2|{北|きた}と{東|ひがし}のあいだの{方位|ほうい}を{何|なん}といいますか。|{北東|ほくとう}
+  2|{南|みなみ}と{西|にし}のあいだの{方位|ほうい}を{何|なん}といいますか。|{南西|なんせい}
+  2|{東|ひがし}・{西|にし}・{南|みなみ}・{北|きた}に、{北東|ほくとう}・{北西|ほくせい}・{南東|なんとう}・{南西|なんせい}をくわえた8つの{方位|ほうい}を{何|なん}といいますか。|{八方位|はっぽうい}
   2|{建物|たてもの}や{土地|とち}の{使|つか}われ{方|かた}などを、かんたんな{記号|きごう}で{表|あらわ}したものを{何|なん}といいますか。|{地図|ちず}{記号|きごう}
   2|{地図|ちず}{記号|きごう}や、そのいみを{地図|ちず}のすみにまとめたものを{何|なん}といいますか。|はんれい
   1|{地図|ちず}は、{方位|ほうい}を（　　　）にしてかきます。{土地|とち}の{使|つか}われ{方|かた}などは（　　　）で{表|あらわ}します。|{北|きた}を{上|うえ}|{地図|ちず}{記号|きごう}|-{南|みなみ}を{上|うえ}|-{絵|え}
   2|{方位|ほうい}じしんの{色|いろ}のついたはりは（　　　）をさします。{北|きた}を{向|む}いたとき、{左|ひだり}は（　　　）です。|{北|きた}|{西|にし}|-{南|みなみ}|-{東|ひがし}
   1|?{地図|ちず}は、ふつう{北|きた}を{上|うえ}にしてかく。|○
   1|?{方位|ほうい}じしんのはりは、いつも{東|ひがし}をさして{止|と}まる。|×
-  2|?{北東|ほくとう}は、{北|きた}と{東|ひがし}のあいだの{方|ほう}{位|くらい}である。|○
+  2|?{北東|ほくとう}は、{北|きた}と{東|ひがし}のあいだの{方位|ほうい}である。|○
   2|?{地図|ちず}{記号|きごう}を{使|つか}うと、{地図|ちず}がすっきりして{見|み}やすくなる。|○
   1|?{南|みなみ}を{向|む}いて{立|た}つと、{右手|みぎて}は{東|ひがし}である。|×
   2|!{正|ただ}しいものには○、まちがっているものには×を{書|か}きましょう。|{地図|ちず}は{北|きた}を{上|うえ}にしてかく=○|{方位|ほうい}じしんのはりは{北|きた}をさす=○|{太陽|たいよう}は{西|にし}からのぼる=×|{田|た}の{記号|きごう}は「‖」である=○|{郵便|ゆうびん}{局|きょく}の{記号|きごう}は「{文|ぶん}」である=×
@@ -34283,8 +34323,8 @@ svg .keyd { fill: var(--key, #ef7d00); font-weight: bold; }
       const from = (n) => dirFrom(m.station, m.placed[n]);
       const qs = [];
       const a = names[0], b = names[1];
-      qs.push([`{駅|えき}から{見|み}て、${symName(a)}はどの{方|ほう}{位|くらい}にありますか。`, from(a)]);
-      qs.push([`{駅|えき}から{見|み}て、${symName(b)}はどの{方|ほう}{位|くらい}にありますか。`, from(b)]);
+      qs.push([`{駅|えき}から{見|み}て、${symName(a)}はどの{方位|ほうい}にありますか。`, from(a)]);
+      qs.push([`{駅|えき}から{見|み}て、${symName(b)}はどの{方位|ほうい}にありますか。`, from(b)]);
       if (lv >= 2) qs.push([`{川|かわ}より{北|きた}にある{地図|ちず}{記号|きごう}の{名前|なまえ}を1つ{答|こた}えましょう。`, names.filter((n) => m.placed[n][1] === 0).map((n) => symName(n)).join("・") || "ない"]);
       if (lv >= 3) qs.push([`{駅|えき}から{北|きた}へまっすぐ{進|すす}むと、{何|なに}をわたりますか。`, "{川|かわ}({橋|はし}をわたる)"]);
       return { fig: m.fig, text: "{下|した}の{町|まち}の{地図|ちず}を{見|み}て、{次|つぎ}の{問|と}いに{答|こた}えましょう。(8{方位|ほうい}で{答|こた}えましょう)", qs, key: `t${lv}` + JSON.stringify(m.placed), side: false };
@@ -34310,16 +34350,16 @@ svg .keyd { fill: var(--key, #ef7d00); font-weight: bold; }
   3|∴の{形|かたち}({茶|ちゃ}の{実|み})の{地図|ちず}{記号|きごう}は{何|なに}を{表|あらわ}しますか。|{茶畑|ちゃばたけ}
   `);
     const dirQ = quiz("e3.dirQ", `
-  1|{北|きた}の{反対|はんたい}の{方|ほう}{位|くらい}は{何|なん}ですか。|{南|みなみ}
-  1|{東|ひがし}の{反対|はんたい}の{方|ほう}{位|くらい}は{何|なん}ですか。|{西|にし}
-  2|{北東|ほくとう}の{反対|はんたい}の{方|ほう}{位|くらい}は{何|なん}ですか。|{南西|なんせい}
-  2|{北西|ほくせい}の{反対|はんたい}の{方|ほう}{位|くらい}は{何|なん}ですか。|{南東|なんとう}
-  1|{北|きた}を{向|む}いたとき、{左手|ひだりて}の{方|ほう}{位|くらい}は{何|なん}ですか。|{西|にし}
-  2|{東|ひがし}を{向|む}いたとき、{右手|みぎて}の{方|ほう}{位|くらい}は{何|なん}ですか。|{南|みなみ}
-  2|{西|にし}を{向|む}いたとき、{右手|みぎて}の{方|ほう}{位|くらい}は{何|なん}ですか。|{北|きた}
-  3|{南|みなみ}を{向|む}いたとき、{左手|ひだりて}の{方|ほう}{位|くらい}は{何|なん}ですか。|{東|ひがし}
-  3|{北|きた}と{西|にし}のあいだの{方|ほう}{位|くらい}は{何|なん}ですか。|{北西|ほくせい}
-  3|{南|みなみ}と{東|ひがし}のあいだの{方|ほう}{位|くらい}は{何|なん}ですか。|{南東|なんとう}
+  1|{北|きた}の{反対|はんたい}の{方位|ほうい}は{何|なん}ですか。|{南|みなみ}
+  1|{東|ひがし}の{反対|はんたい}の{方位|ほうい}は{何|なん}ですか。|{西|にし}
+  2|{北東|ほくとう}の{反対|はんたい}の{方位|ほうい}は{何|なん}ですか。|{南西|なんせい}
+  2|{北西|ほくせい}の{反対|はんたい}の{方位|ほうい}は{何|なん}ですか。|{南東|なんとう}
+  1|{北|きた}を{向|む}いたとき、{左手|ひだりて}の{方位|ほうい}は{何|なん}ですか。|{西|にし}
+  2|{東|ひがし}を{向|む}いたとき、{右手|みぎて}の{方位|ほうい}は{何|なん}ですか。|{南|みなみ}
+  2|{西|にし}を{向|む}いたとき、{右手|みぎて}の{方位|ほうい}は{何|なん}ですか。|{北|きた}
+  3|{南|みなみ}を{向|む}いたとき、{左手|ひだりて}の{方位|ほうい}は{何|なん}ですか。|{東|ひがし}
+  3|{北|きた}と{西|にし}のあいだの{方位|ほうい}は{何|なん}ですか。|{北西|ほくせい}
+  3|{南|みなみ}と{東|ひがし}のあいだの{方位|ほうい}は{何|なん}ですか。|{南東|なんとう}
   `);
     const compassFig = figs("e3.compassFig", [
       { lv: 1, make: (rng) => {
@@ -34907,7 +34947,7 @@ svg .keyd { fill: var(--key, #ef7d00); font-weight: bold; }
       const words = rng.shuffle(five.slice());
       const qs = byPlace.map((t, k) => [`${NUM[k]}`, `${LET[words.indexOf(t)]}(${t[0]})`]);
       if (lv >= 2) qs.push([`${NUM[0]}の{都道府県|とどうふけん}{名|めい}を{書|か}きましょう。`, PREF[byPlace[0][1]]]);
-      return { fig: jpMap({ mark: byPlace.map((t, k) => [t[1], NUM[k]]), fill: Object.fromEntries(byPlace.map((t) => [t[1], "#f0d070"])) }), text: `{地図|ちず}の${NUM[0]}〜${NUM[five.length - 1]}の{都道府県|とどうふけん}で、{生産|せいさん}が{日本|にほん}{一|いち}の{農産物|のうさんぶつ}を、{下|した}のア〜${LET[five.length - 1]}から1つずつえらびましょう。　${words.map((t, k) => `${LET[k]} ${t[0]}`).join("　")}`, qs, key: `t${lv}` + five.map((t) => t[0]).join(), side: false };
+      return { fig: jpMap({ mark: byPlace.map((t, k) => [t[1], NUM[k]]), fill: Object.fromEntries(byPlace.map((t) => [t[1], "#f0d070"])) }), text: `{地図|ちず}の${NUM[0]}〜${NUM[five.length - 1]}の{都道府県|とどうふけん}で、{生産|せいさん}が{日本|にほん}{一|いち}の{農産物|のうさんぶつ}を、{下|した}のア〜${LET[five.length - 1]}から1つずつえらびましょう。[[br]]〔 ${words.map((t, k) => `${LET[k]} ${t[0]}`).join(" ・ ")} 〕`, qs, key: `t${lv}` + five.map((t) => t[0]).join(), side: false };
     } })));
     const toku = bank("e4.toku", `
   1|りんごの{生産|せいさん}がいちばん{多|おお}い{県|けん}はどこですか。|={青森|あおもり}{県|けん}|{長野|ながの}{県|けん}|{山形|やまがた}{県|けん}
@@ -36136,7 +36176,7 @@ svg .keyd { fill: var(--key, #ef7d00); font-weight: bold; }
   2|{川|かわ}が{山地|さんち}から{平地|ひらち}に{出|で}るところに、{土砂|どしゃ}がたまってできた{扇形|せんけい}の{地形|ちけい}を{何|なん}といいますか。|{扇状地|せんじょうち}
   2|{川|かわ}が{海|うみ}や{湖|みずうみ}に{流|なが}れこむところに、{土砂|どしゃ}がたまってできた{低|ひく}く{平|たい}らな{地形|ちけい}を{何|なん}といいますか。|{三角州|さんかくす}
   2|{地域|ちいき}の{課題|かだい}を{調|しら}べるとき、{実際|じっさい}に{現地|げんち}に{行|い}って{調|しら}べることを{何|なん}といいますか。|{野外|やがい}{調査|ちょうさ}(フィールドワーク)
-  2|{地形|ちけい}{図|ず}で、とくに{方位|ほうい}{記号|きごう}がないとき、{上|うえ}はどの{方|ほう}{位|くらい}ですか。|{北|きた}
+  2|{地形|ちけい}{図|ず}で、とくに{方位|ほうい}{記号|きごう}がないとき、{上|うえ}はどの{方位|ほうい}ですか。|{北|きた}
   2|{自然|しぜん}{災害|さいがい}の{被害|ひがい}を{予測|よそく}し、ひなん{場所|ばしょ}などを{示|しめ}した{地図|ちず}を{何|なん}といいますか。|ハザードマップ({防災|ぼうさい}マップ)
   2|{地形|ちけい}{図|ず}の「{実際|じっさい}の{距離|きょり}」は、{地図|ちず}{上|じょう}の{長|なが}さ×（　　　）の{分母|ぶんぼ}で{求|もと}めます。{等高線|とうこうせん}の{間隔|かんかく}が{広|ひろ}いところは、かたむきが（　　　）です。|{縮尺|しゅくしゃく}|ゆるやか|-{面積|めんせき}|-{急|きゅう}
   2|@{扇状地|せんじょうち}の{中央|ちゅうおう}{部|ぶ}は{水|みず}はけがよく、［{果樹|かじゅ}{園|えん}*・{水田|すいでん}］に{利用|りよう}されることが{多|おお}い。|
@@ -38669,7 +38709,9 @@ svg .keyd { fill: var(--key, #ef7d00); font-weight: bold; }
     const own = OWN_ANSWER.has(p.generator) || figBox(p.figure) || p.figure?.type === "hissan" || p.workspace && p.workspace.type !== "none" || !display || /グラフ|{下|した}の{表|ひょう}|下の表|図/.test(plainAns(display).slice(0, 6));
     // 中学:答えの四角は字数に合わせたふつうの四角(分数が入るときは高い四角)
     if (p.plainBox || isChuGen(p.generator)) {
-      const head = String(display).split("　")[0];
+      // 答えのうしろの(…)のそえがきは、四角のはばに入れない
+      const head0 = String(display).split("　")[0], head1 = head0.replace(/[(（][^)）]*[)）]\s*$/, "");
+      const head = plainAns(head1).trim() ? head1 : head0;
       const flat = plainAns(head.replace(/\[\[f:([^\]\/]+)\/([^\]]+)\]\]/g, (_, n, d) => "0".repeat(Math.max([...plainAns(n)].length, [...plainAns(d)].length) + 1)));
       const kind = /\[\[f:/.test(head) ? "tbox" : "abox";
       const w = bw(flat);
@@ -39187,11 +39229,12 @@ svg .keyd { fill: var(--key, #ef7d00); font-weight: bold; }
       if (!filled && !yoji) for (const p2 of s.problems) {
         const a = ansify(p2, s.instruction || "");
         const ws = [...(a.text + (a.need ? a.box : "")).matchAll(/\[\[abox:([\d.]+)\]\]/g)].map((m) => Number(m[1]));
-        if (ws.length === 1) uniMax = Math.max(uniMax, ws[0]);
+        // 社会:とても長い答えの四角にそろえると、ほかの四角が長くなりすぎるので、45mm までの四角だけそろえる
+        if (ws.length === 1 && ws[0] <= 45) uniMax = Math.max(uniMax, ws[0]);
       }
       const uniW = (txt) => {
         const ws = [...txt.matchAll(/\[\[abox:([\d.]+)\]\]/g)];
-        return ws.length === 1 && uniMax ? txt.replace(/\[\[abox:[\d.]+\]\]/, `[[abox:${uniMax}]]`) : txt;
+        return ws.length === 1 && uniMax && Number(ws[0][1]) <= uniMax ? txt.replace(/\[\[abox:[\d.]+\]\]/, `[[abox:${uniMax}]]`) : txt;
       };
       let traced = false;
       if (s.instruction) {

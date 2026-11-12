@@ -122,7 +122,10 @@ var SD = (() => {
       const p = J.pref[i], cx = p.c[0] * k, cy = p.c[1] * k;
       const bw = (p.b[1][0] - p.b[0][0]) * k;
       if (out || bw < 7) {
-        const [dx, dy] = out || CAND.find(([a, b]) => far(cx + a, cy + b)) || CAND[0];
+        let [dx, dy] = out || CAND.find(([a, b]) => far(cx + a, cy + b)) || CAND.find(([a, b]) => cx + a > 4 && cx + a < W - 4 && cy + b > 4 && cy + b < H - 3) || CAND[0];
+        // 図のわくの外に出ないように
+        dx = Math.max(4 - cx, Math.min(W - 4 - cx, dx));
+        dy = Math.max(4 - cy, Math.min(H - 3 - cy, dy));
         used.push([cx + dx, cy + dy]);
         raw += line(cx, cy, cx + dx, cy + dy, { w: 0.3 }) + `<circle cx="${r1(cx)}" cy="${r1(cy)}" r="0.6" fill="#000"/>`;
         lab.push(T(cx + dx + (dx >= 0 ? 2.2 : -2.2), cy + dy + 1.4, s, 3.6, { bold: true }));
@@ -321,7 +324,8 @@ var SD = (() => {
     L(lb.g ?? "{選挙|せんきょ}", 63.5, 25, "end");
     L(lb.h ?? "{世論|よろん}", 42, 58.5, "end");
     L(lb.i ?? "{国民|こくみん}{審査|しんさ}", 88, 58.5, "start");
-    return fig(132, 84, raw, lab, 1.05);
+    // 左はしのことばがはみ出さないように、全体を右へ 3mm ずらす
+    return fig(136, 84, `<g transform="translate(3,0)">${raw}</g>`, lab.map((x) => ({ ...x, x: x.x + 3 })), 1.05);
   }
 
   // ===== 需要と供給の曲線 =====

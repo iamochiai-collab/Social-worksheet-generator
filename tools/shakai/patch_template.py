@@ -49,3 +49,5 @@ R('"sansu-print:" + k', '"shakai-print:" + k')
 s = s.replace('</style>', '.hg.g7, .hg.g8, .hg.g9 { font-size: 0.82em; }\n</style>', 1)
 p.write_text(s, encoding='utf-8')
 print('ok')
+
+# 2026-11-12 答えの四角:(…)のそえがきをはばに入れない・45mm までの四角だけはばをそろえる(src/template.html に直接入れた)

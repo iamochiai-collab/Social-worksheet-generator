@@ -34155,7 +34155,9 @@ svg .keyd { fill: var(--key, #ef7d00); font-weight: bold; }
     const own = OWN_ANSWER.has(p.generator) || figBox(p.figure) || p.figure?.type === "hissan" || p.workspace && p.workspace.type !== "none" || !display || /グラフ|{下|した}の{表|ひょう}|下の表|図/.test(plainAns(display).slice(0, 6));
     // 中学:答えの四角は字数に合わせたふつうの四角(分数が入るときは高い四角)
     if (p.plainBox || isChuGen(p.generator)) {
-      const head = String(display).split("　")[0];
+      // 答えのうしろの(…)のそえがきは、四角のはばに入れない
+      const head0 = String(display).split("　")[0], head1 = head0.replace(/[(（][^)）]*[)）]\s*$/, "");
+      const head = plainAns(head1).trim() ? head1 : head0;
       const flat = plainAns(head.replace(/\[\[f:([^\]\/]+)\/([^\]]+)\]\]/g, (_, n, d) => "0".repeat(Math.max([...plainAns(n)].length, [...plainAns(d)].length) + 1)));
       const kind = /\[\[f:/.test(head) ? "tbox" : "abox";
       const w = bw(flat);
@@ -34673,11 +34675,12 @@ svg .keyd { fill: var(--key, #ef7d00); font-weight: bold; }
       if (!filled && !yoji) for (const p2 of s.problems) {
         const a = ansify(p2, s.instruction || "");
         const ws = [...(a.text + (a.need ? a.box : "")).matchAll(/\[\[abox:([\d.]+)\]\]/g)].map((m) => Number(m[1]));
-        if (ws.length === 1) uniMax = Math.max(uniMax, ws[0]);
+        // 社会:とても長い答えの四角にそろえると、ほかの四角が長くなりすぎるので、45mm までの四角だけそろえる
+        if (ws.length === 1 && ws[0] <= 45) uniMax = Math.max(uniMax, ws[0]);
       }
       const uniW = (txt) => {
         const ws = [...txt.matchAll(/\[\[abox:([\d.]+)\]\]/g)];
-        return ws.length === 1 && uniMax ? txt.replace(/\[\[abox:[\d.]+\]\]/, `[[abox:${uniMax}]]`) : txt;
+        return ws.length === 1 && uniMax && Number(ws[0][1]) <= uniMax ? txt.replace(/\[\[abox:[\d.]+\]\]/, `[[abox:${uniMax}]]`) : txt;
       };
       let traced = false;
       if (s.instruction) {

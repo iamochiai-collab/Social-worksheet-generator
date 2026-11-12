@@ -26,7 +26,13 @@ const pw = (() => { try { return require('playwright'); } catch (e) { return req
           const raw = (pr.figure?.items || []).filter((x) => x.t === "raw").map((x) => x.svg).join("");
           if (/\{[^{}|]+\|[^{}]*\}/.test(raw)) out.push(`${id}/${lv}: 図にふりがな記法`);
           if (pr.workspace?.type === "lines" && pr.answer.display.split("　").length !== pr.workspace.labels.length) out.push(`${id}/${lv}: 答えの数と線の数がちがう ${pr.answer.display}`);
-          if (/　/.test(String(pr.answer.display).replace(/^\(\d+\)/, "")) && pr.workspace?.type !== "lines") out.push(`${id}/${lv}: 答えに全角スペース ${pr.answer.display}`);
+          if (/　/.test(String(pr.answer.display).replace(/^\(\d+\)/, "")) && pr.workspace?.type !== "lines" && !pr.noAnswerBox) out.push(`${id}/${lv}: 答えに全角スペース ${pr.answer.display}`);
+          // 図の問題で、四角の数と答えの数がそろっているか(社会:答えを問いのうしろの四角に書く形)
+          if (pr.noAnswerBox && pr.figure) {
+            const nb = (String(pr.text).match(/\[\[(?:abox:[\d.]+|aline)\]\]/g) || []).length;
+            const na = String(pr.answer.display).split("　").length;
+            if (nb !== na) out.push(`${id}/${lv}: 四角の数と答えの数がちがう ${nb}/${na}`);
+          }
           keys.add(pr.key.replace(/#\d+$/, ""));
         }
         stat[`${id}/${lv}`] = keys.size;
