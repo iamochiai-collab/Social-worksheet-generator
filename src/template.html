@@ -564,12 +564,24 @@ ruby rt { font-size: 0.5em; letter-spacing: 0; font-weight: normal; }
 svg .keyd { fill: var(--key, #ef7d00); font-weight: bold; }
 
 .hg.g7, .hg.g8, .hg.g9 { font-size: 0.82em; }
+/* ===== ほかの教科のプリントへ(国語・算数・理科・社会 共通) ===== */
+.xsite { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 0 0 12px; }
+.xsite-lbl { font-size: 13px; font-weight: 700; color: #6b7280; margin-right: 2px; }
+.xsite-a { display: inline-flex; align-items: center; min-height: 32px; padding: 3px 14px; border: 2px solid var(--xc); border-radius: 999px;
+  background: #fff; color: var(--xc); font-size: 14px; font-weight: 700; line-height: 1.2; text-decoration: none; white-space: nowrap;
+  transition: background-color .15s, color .15s, transform .15s; }
+a.xsite-a:hover, a.xsite-a:focus-visible { background: var(--xc); color: #fff; transform: translateY(-1px); }
+a.xsite-a:focus-visible { outline: 3px solid var(--xc); outline-offset: 2px; }
+.xsite-a.on { background: var(--xc); color: #fff; cursor: default; }
+@media (prefers-reduced-motion: reduce) { .xsite-a { transition: none; } a.xsite-a:hover { transform: none; } }
+@media print { .xsite { display: none !important; } }
 </style>
 </head>
 <body data-view="home">
 <section class="home" id="home">
   <div class="home-top">
     <div class="home-main">
+<nav class="xsite" aria-label="ほかの教科のプリント"><span class="xsite-lbl">教科</span><a class="xsite-a" style="--xc:#C23B33" href="https://iamochiai-collab.github.io/Kokugo-worksheet-generator/">国語</a><a class="xsite-a" style="--xc:#2B66AE" href="https://iamochiai-collab.github.io/Math-worksheet-generator/">算数・数学</a><a class="xsite-a" style="--xc:#2E8A57" href="https://iamochiai-collab.github.io/Science-worksheet-generator/">理科</a><span class="xsite-a on" style="--xc:#A87F00" aria-current="page">社会</span></nav>
   <div class="home-hero">
     <h1>社会プリント<span class="version" id="versionHome"></span></h1>
     <p>小学校1・2年のさきどり社会 ・ 小学校3〜6年の社会 ・ 中学の地理・歴史・公民。単元は教科書でよくある順にならべています。学年をえらんで、単元のボタンをおすとプリントができます。</p>
