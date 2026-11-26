@@ -3,7 +3,7 @@
 この会話をはじめたら、まずこのファイルを読んでください。作っている人は 落合聡一(小学校・特別支援学校の先生)。返事はやさしい日本語で、短めに。
 
 ## 1. これは何か
-- 1ファイルで動く社会プリントのアプリ「社会プリント」(第1版 2026-11-11、第1.1版 2026-11-26 でホームを算数プリントと同じ形に)。理科プリント(iamochiai-collab/Science-worksheet-generator)をもとに作った
+- 1ファイルで動く社会プリントのアプリ「社会プリント」(第1版 2026-11-11、第2版 2026-11-26 でホームを算数プリントと同じ形に)。理科プリント(iamochiai-collab/Science-worksheet-generator)をもとに作った
 - GitHub: `iamochiai-collab/Social-worksheet-generator`(main の `/docs` を Pages で公開。https://iamochiai-collab.github.io/Social-worksheet-generator/)
 - ポータル「メガネプリント教材庫」(iamochiai-collab/megane-print)の 社会(黄色)からリンクしている
 

@@ -43,7 +43,7 @@ print('ok')
 s = p.read_text(encoding='utf-8')
 s = s.replace('drill: "計算問題", word: "基本問題", figure: "図・実験"', 'drill: "一問一答", word: "基本問題", figure: "地図・資料"')
 s = s.replace('(れい:グラフ、時計、分数)', '(れい:地図記号、都道府県、江戸時代)')
-s = s.replace('第1版(2026-11-11)', '第1.1版(2026-11-26)')
+s = s.replace('第1版(2026-11-11)', '第2版(2026-11-26)')
 p.write_text(s, encoding='utf-8')
 s = p.read_text(encoding='utf-8')
 a = '@media print { .xsite { display: none !important; } }\n'
