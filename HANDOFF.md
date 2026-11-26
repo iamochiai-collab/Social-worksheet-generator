@@ -3,9 +3,9 @@
 この会話をはじめたら、まずこのファイルを読んでください。作っている人は 落合聡一(小学校・特別支援学校の先生)。返事はやさしい日本語で、短めに。
 
 ## 1. これは何か
-- 1ファイルで動く社会プリントのアプリ「社会プリント」(第1版 2026-11-11)。理科プリント(iamochiai-collab/Science-worksheet-generator)をもとに作った
-- GitHub: `iamochiai-collab/Social-worksheet-generator`(予定。main の `/docs` を Pages で公開)
-- ポータル「メガネプリント教材庫」(iamochiai-collab/megane-print)の 社会 からリンクする予定
+- 1ファイルで動く社会プリントのアプリ「社会プリント」(第1版 2026-11-11、第1.1版 2026-11-26 でホームを算数プリントと同じ形に)。理科プリント(iamochiai-collab/Science-worksheet-generator)をもとに作った
+- GitHub: `iamochiai-collab/Social-worksheet-generator`(main の `/docs` を Pages で公開。https://iamochiai-collab.github.io/Social-worksheet-generator/)
+- ポータル「メガネプリント教材庫」(iamochiai-collab/megane-print)の 社会(黄色)からリンクしている
 
 ## 2. しくみ
 - 問題は `content/*.js` にふつうの日本語で書く → `node tools/rika/annotate.js` で ふりがなをつけて `src/generators/<名前>/part1.js` へ → `python3 tools/build.py`
@@ -23,6 +23,11 @@
 - 図の中のことばは `T(x, y, ことば)` で書く(SVG に日本語を直接書かない)。名前で引く表(SYM・CLIMATE・地図の国名)は、ふりがなつきの名前でも引けるように noRuby している
 - 読みのまちがい(人名・地名)は `tools/rika/yomi.txt` に `ことば={漢字|かな}` で足す。`tools/rika/yomi-report.txt` に読みの一覧が出る
 - template.html の社会用の変更は `tools/shakai/patch_template.py` にまとめてある
+- ホーム(2026-11-26):算数プリントの新しいホーム(ロゴ・3つのタブ・お気に入り・あたらしくなったこと・カードの見本・ページボタン・うごく UI・おしらせポップアップ)を入れた
+  - やりかた:算数の template(新しいホームの前 = `ffdb9ed^`)を base、社会の template を ours、算数の最新を theirs にして `git merge-file` → ぶつかった所を手で直す → `tools/shakai/patch_ui.py`(分野べつ・CHANGES・字の書きかえ)
+  - `assets/ui/`:logo(社会プリント)・タブの絵・bell・new は算数から。分野べつの絵(dm_*)は assets/pic から。how_fav1〜3 は `tools/shakai/favslides.js` でスマホ画面から作った
+  - 分野べつ = 特別支援の内容 ア〜カ(社会参加ときまり・公共施設と制度・地域の安全・産業と生活・我が国の地理や歴史・外国の様子)。単元の `domain` に「ア 社会参加ときまり」のように書く
+  - あたらしくなったこと = template の `CHANGES`(上ほど新しい、10こまで)。おしらせ = `NOTICE`(id と until と #noticeDlg の中身)
 
 ## 3. 検査(変えたら必ず)
 ```sh
@@ -32,6 +37,7 @@ node tools/test/layout.js docs/index.html 結果.json 1,2,3,4,5   # fails 0・ov
 node tools/test/layout.js docs/index.html 結果.json 6,7,8,9
 node tools/test/layout.js docs/index.html 結果.json 21,22,23,24,25,26,27
 node tools/test/firstopen.js docs/index.html
+node tools/test/overlap.js docs/index.html 結果.json 4      # 算数からもらった見た目の検査
 ```
 
 ## 4. 先生の希望(算数・理科プリントと同じ)

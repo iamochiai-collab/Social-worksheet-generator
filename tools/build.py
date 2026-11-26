@@ -63,6 +63,10 @@ s = re.sub(r'\{\{ICON:(\w+)\}\}', lambda m: 'data:image/png;base64,' + base64.b6
 # お金の絵({{MONEY:名前}} に assets/money/名前.webp)
 # お金の絵は社会ではつかわない(算数のコードの名残り)
 s = re.sub(r'\{\{MONEY:(\w+)\}\}', '', s)
+# ホームの アイコン・ロゴ({{UI:名前}} に assets/ui/名前.webp)
+s = re.sub(r'\{\{UI:(\w+)\}\}', lambda m: 'data:image/webp;base64,' + base64.b64encode((root / 'assets' / 'ui' / f'{m.group(1)}.webp').read_bytes()).decode(), s)
+# 算数のイラスト表(社会ではつかわないので からにする)
+s = s.replace('{{ILLUST_MAP}}', '{}')
 # イラスト・図(assets/pic・assets/fig)を、名前 → [data URI, はば, 高さ] の表にして /*PICMAP*/{} に入れる
 from PIL import Image as _Image
 _pm = {}
@@ -73,7 +77,7 @@ for _d in ['pic', 'fig']:
 assert s.count('/*PICMAP*/{}') == 1
 s = s.replace('/*PICMAP*/{}', json.dumps(_pm))
 s = re.sub(r'\{\{VENDOR:([\w.\-]+)\}\}', lambda m: (root / 'vendor' / m.group(1)).read_text(encoding='utf-8'), s)
-assert '{{CHARA:' not in s and '{{VENDOR:' not in s and '{{MONEY:' not in s and '{{ICON:' not in s
+assert '{{ILLUST_MAP}}' not in s and '{{UI:' not in s and '{{CHARA:' not in s and '{{VENDOR:' not in s and '{{MONEY:' not in s and '{{ICON:' not in s
 
 (root / 'docs').mkdir(exist_ok=True)
 # 公開ページ用に、アイコンをファイルとしても置く(iPhone・iPad のホーム画面用)
